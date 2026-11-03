@@ -26,6 +26,14 @@ BI_API_KEY=secret python -m vnbi serve --port 8080   # GET /address/{chain}/{add
 ```
 Indexer thật: `vnbi.indexer.Indexer(con, "eth", EvmRpc(url, tokens={...}))`.sync().
 
+## Nối RPC thật (QuickNode)
+```bash
+cp .env.example .env          # điền EVM_RPC_URL; .env đã bị .gitignore
+python -m vnbi rpc-check      # in block hiện tại, URL được che khoá
+python -m vnbi index-evm --max-blocks 20    # nạp USDT/USDC + ETH từ ~10 block gần nhất
+```
+Khoá RPC chỉ nằm trong biến môi trường, không bao giờ trong mã nguồn. **Không đặt khoá vào bản demo công khai trên Vercel**: API demo không có xác thực nên ai cũng có thể tiêu hết hạn mức của bạn.
+
 ## Cổng web (GUI)
 ```bash
 python -m vnbi demo --out demo_out                    # tạo dữ liệu mẫu

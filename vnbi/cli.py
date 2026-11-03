@@ -2,7 +2,9 @@
 import argparse
 import csv
 import json
+import os
 import sys
+from urllib.parse import urlparse
 
 from . import api, cluster, db
 from . import labels as L
@@ -10,6 +12,38 @@ from .indexer import STABLES
 from .risk import RiskEngine
 from .vendor.cluster_utxo import read_jsonl
 from .vendor.evm_sweep_cluster import load as load_evm_rows
+
+
+MAINNET_TOKENS = {  # token niêm yết mặc định trên Ethereum mainnet: contract -> (ký hiệu, decimals)
+    "0xdac17f958d2ee523a2206206994597c13d831ec7": ("USDT", 6),
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": ("USDC", 6),
+}
+
+
+def load_env(path=".env"):
+    """Nạp KEY=VALUE từ .env (nếu có) vào os.environ, không ghi đè biến đã đặt. .env đã nằm trong .gitignore."""
+    if not os.path.exists(path):
+        return
+    for line in open(path, encoding="utf-8"):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+
+
+def rpc_url():
+    """URL RPC (vd. QuickNode) chỉ lấy từ biến môi trường, không bao giờ nằm trong mã nguồn."""
+    u = os.environ.get("EVM_RPC_URL") or os.environ.get("QUICKNODE_URL")
+    if not u:
+        sys.exit("Chưa đặt EVM_RPC_URL. Đặt biến môi trường hoặc ghi vào file .env (xem .env.example).")
+    return u
+
+
+def mask_url(u):
+    """Che phần khoá của URL RPC khi in ra: https://host/…abcd."""
+    p = urlparse(u)
+    tail = p.path.strip("/")
+    return f"{p.scheme}://{p.hostname}/" + (("…" + tail[-4:]) if tail else "")
 
 
 def parse_prices(items):
@@ -50,6 +84,10 @@ def main(argv=None):
     s = sub.add_parser("rebuild"); s.add_argument("--chain", default="eth")
     s = sub.add_parser("screen"); s.add_argument("chain"); s.add_argument("address")
     s = sub.add_parser("serve"); s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8080)
+    sub.add_parser("rpc-check")
+    s = sub.add_parser("index-evm"); s.add_argument("--chain", default="eth")
+    s.add_argument("--start-block", type=int, help="mặc định: block hiện tại - 10")
+    s.add_argument("--max-blocks", type=int, default=20); s.add_argument("--price", action="append", help="ETH=3500")
     s = sub.add_parser("demo"); s.add_argument("--out", default="demo_out")
     a = ap.parse_args(argv)
 
@@ -57,8 +95,20 @@ def main(argv=None):
         from .demo import run_demo
         return run_demo(a.out)
 
+    load_env()
+    if a.cmd == "rpc-check":
+        from .indexer import EvmRpc
+        r = EvmRpc(rpc_url())
+        print("RPC:", mask_url(rpc_url()), "| block hiện tại:", r.head())
+        return 0
     con = db.connect(a.db)
-    if a.cmd == "import-labels":
+    if a.cmd == "index-evm":
+        from .indexer import EvmRpc, Indexer
+        rpc = EvmRpc(rpc_url(), tokens=MAINNET_TOKENS)
+        start = a.start_block if a.start_block is not None else rpc.head() - 10
+        ix = Indexer(con, a.chain, rpc, start_block=start, prices=parse_prices(a.price))
+        print(ix.sync(max_blocks=a.max_blocks))
+    elif a.cmd == "import-labels":
         print(f"{L.import_csv(con, a.csv)} nhãn đã nạp")
     elif a.cmd == "ingest-csv":
         print(f"{ingest_csv(con, a.chain, a.csv, parse_prices(a.price))} transfer đã nạp")

@@ -171,3 +171,16 @@ def test_api_portal_endpoints(con):
     assert api.handle(svc, "GET", "/audit?limit=2")[1]["items"]
     assert api.handle(svc, "GET", "/labels/btc/S")[1]["items"][0]["category"] == "sanctioned"
     assert (Path(api.__file__).with_name("web") / "index.html").exists()
+
+
+def test_rpc_url_is_masked_and_env_only(monkeypatch, tmp_path):
+    from vnbi import cli
+    u = "https://abc-def.ethereum-mainnet.quiknode.pro/SECRETTOKEN1234/"
+    m = cli.mask_url(u)
+    assert "SECRET" not in m and m.endswith("…1234") and "quiknode.pro" in m
+    monkeypatch.delenv("EVM_RPC_URL", raising=False); monkeypatch.delenv("QUICKNODE_URL", raising=False)
+    with pytest.raises(SystemExit):
+        cli.rpc_url()
+    env = tmp_path / ".env"; env.write_text(f"EVM_RPC_URL={u}\n")
+    cli.load_env(str(env))
+    assert cli.rpc_url() == u
