@@ -1,0 +1,24 @@
+{
+  "version": "2026-11-03.1",
+  "_note": "Mẫu để tinh chỉnh. Chính sách thuộc về đội compliance; mọi ngưỡng phải đo lại trên ca thật của bạn.",
+  "taint_model": "haircut",
+  "gamma": 0.7,
+  "max_hops": 3,
+  "min_share": 0.02,
+  "min_usd": 10,
+  "min_label_confidence": 0.5,
+  "fanout": 50,
+  "severity": {
+    "sanctioned": 100, "terror_financing": 95, "ransomware": 90, "hack_theft": 85,
+    "darknet": 80, "scam_investment": 70, "fake_trading_app": 70, "mule": 60,
+    "mixer": 40, "gambling": 20
+  },
+  "rules": [
+    {"id": "R1", "name": "Đối tác thuộc danh sách trừng phạt", "categories": ["sanctioned"], "kind": "any", "min_share": 0.0, "action": "block"},
+    {"id": "R2", "name": "Tiếp xúc trực tiếp ransomware/hack/darknet/khủng bố", "categories": ["ransomware", "hack_theft", "darknet", "terror_financing"], "kind": "direct", "min_share": 0.0, "action": "hold"},
+    {"id": "R3", "name": "Tiếp xúc trực tiếp lừa đảo/mule", "categories": ["scam_investment", "fake_trading_app", "mule"], "kind": "direct", "min_share": 0.0, "action": "hold"},
+    {"id": "R4", "name": "Tiếp xúc gián tiếp hạng mục nghiêm trọng >= 10%", "categories": ["sanctioned", "ransomware", "hack_theft", "darknet", "terror_financing", "scam_investment", "fake_trading_app", "mule"], "kind": "indirect", "min_share": 0.10, "action": "review"},
+    {"id": "R5", "name": "Mixer / privacy pool", "categories": ["mixer"], "kind": "any", "min_share": 0.0, "action": "review"},
+    {"id": "R6", "name": "Tiếp xúc cờ bạc trực tiếp", "categories": ["gambling"], "kind": "direct", "min_share": 0.0, "action": "review"}
+  ]
+}

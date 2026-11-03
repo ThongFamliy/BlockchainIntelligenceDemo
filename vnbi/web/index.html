@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vnbi - Cổng điều tra on-chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#eef1f4; --sheet:#f9fafb; --ink:#14213d; --ink-2:#4a5670; --rule:#cdd4de; --rule-2:#e1e6ed;
+  --allow:#1d7468; --review:#a86a0c; --hold:#bf3f0b; --block:#9b1c31; --link:#1f4fa8;
+  --allow-bg:#e3f1ee; --review-bg:#faf0dc; --hold-bg:#fbe7dd; --block-bg:#f6e0e4;
+  --font:"Be Vietnam Pro","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1626; --sheet:#151e33; --ink:#e6ebf5; --ink-2:#9aa6bf; --rule:#2c3857; --rule-2:#222c47;
+    --allow:#4fc3b0; --review:#e4a64a; --hold:#f08a5d; --block:#f0788f; --link:#7fa7f0;
+    --allow-bg:#14302d; --review-bg:#33290f; --hold-bg:#35201a; --block-bg:#38161e;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--link)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:3px}
+.app{display:grid;grid-template-columns:208px minmax(0,1fr);min-height:100vh}
+
+/* rail */
+.rail{background:var(--ink);color:#e6ebf5;padding:22px 18px;display:flex;flex-direction:column;gap:28px;position:sticky;top:0;height:100vh}
+.brand{font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:400;font-size:12px;color:#9aa6bf;margin-top:2px}
+.rail nav{display:flex;flex-direction:column;gap:2px}
+.rail nav a{color:#c9d2e6;text-decoration:none;padding:8px 10px;border-radius:4px;border-left:3px solid transparent}
+.rail nav a:hover{background:rgba(255,255,255,.07)}
+.rail nav a[aria-current="page"]{background:rgba(255,255,255,.1);border-left-color:#7fa7f0;color:#fff;font-weight:600}
+.rail .foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;font-size:12px;color:#9aa6bf}
+.rail input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:7px 9px;color:#fff}
+.rail label{font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#777;margin-right:6px}
+.dot.ok{background:#4fc3b0}.dot.bad{background:#f0788f}
+
+/* main */
+main{padding:32px clamp(16px,4vw,48px) 64px;max-width:1080px;width:100%}
+h1{font-size:24px;line-height:1.25;margin:0 0 4px;letter-spacing:-.015em}
+h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.sub{color:var(--ink-2);margin:0 0 22px;max-width:62ch}
+section{margin-top:34px}
+section>h2{padding-bottom:8px;border-bottom:1px solid var(--rule)}
+
+.lookup{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:end}
+.lookup label,.field label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:4px}
+.lookup input,.lookup select,.field input,.field select{width:100%;background:var(--sheet);border:1px solid var(--rule);border-radius:5px;padding:10px 12px}
+input.mono,.mono{font-family:var(--mono);font-size:13.5px}
+.btn{background:var(--ink);color:var(--paper);border:0;border-radius:5px;padding:10px 18px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.15)}
+.btn.ghost{background:transparent;color:var(--link);border:1px solid var(--rule);padding:5px 10px;font-weight:500}
+.btn[disabled]{opacity:.5;cursor:wait}
+
+.err{margin-top:14px;padding:10px 14px;border-left:4px solid var(--block);background:var(--block-bg);color:var(--ink)}
+.stats{display:flex;flex-wrap:wrap;gap:6px 28px;color:var(--ink-2);margin:0 0 26px;font-size:14px}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* verdict */
+.verdict{margin-top:26px;display:grid;grid-template-columns:auto 1fr;gap:0 22px;border-left:8px solid var(--c);background:var(--bg);padding:18px 22px}
+.verdict .word{font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--c);line-height:1.1}
+.verdict .lvl{font-size:13px;color:var(--ink-2);margin-top:4px}
+.verdict dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;font-size:13px;align-self:center}
+.verdict dt{color:var(--ink-2)} .verdict dd{margin:0;word-break:break-all}
+.v-allow{--c:var(--allow);--bg:var(--allow-bg)}.v-review{--c:var(--review);--bg:var(--review-bg)}
+.v-hold{--c:var(--hold);--bg:var(--hold-bg)}.v-block{--c:var(--block);--bg:var(--block-bg)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-weight:500;color:var(--ink-2);text-align:left;font-size:13px;padding:6px 10px 6px 0;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--rule-2);vertical-align:top}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--rule-2)}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--rule);background:var(--sheet);margin:0 4px 2px 0;white-space:nowrap}
+.chip.risk{border-color:var(--block);color:var(--block)}
+.chip.safe{border-color:var(--allow);color:var(--allow)}
+.pill{font-weight:600;font-size:13px}
+.p-allow{color:var(--allow)}.p-review{color:var(--review)}.p-hold{color:var(--hold)}.p-block{color:var(--block)}
+.muted{color:var(--ink-2)}
+
+/* trace: dòng tiền đi từ nguồn rủi ro tới địa chỉ đang xét */
+.trace{margin:14px 0 22px}
+.trace-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.trace-head .pct{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.chain{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--rule)}
+.node{position:relative;padding:2px 0 2px 18px}
+.node::before{content:"";position:absolute;left:-23px;top:9px;width:12px;height:12px;border-radius:50%;background:var(--sheet);border:2px solid var(--ink-2)}
+.node.src::before{background:var(--block);border-color:var(--block)}
+.node.me::before{background:var(--ink);border-color:var(--ink)}
+.hop{margin:0;padding:6px 0 10px 18px;font-size:13px;color:var(--ink-2)}
+.hop .mono{font-size:12px}
+.addr{font-family:var(--mono);font-size:13px;background:none;border:0;padding:0;cursor:copy;color:var(--ink);text-align:left}
+.addr:hover{text-decoration:underline dotted}
+
+ul.notes{margin:0;padding-left:18px;color:var(--ink-2)} ul.notes li{margin:4px 0;max-width:80ch}
+details{margin-top:28px} summary{cursor:pointer;color:var(--ink-2)}
+pre{background:var(--sheet);border:1px solid var(--rule);padding:12px;overflow:auto;font:12px/1.5 var(--mono);max-height:340px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;max-width:680px}
+.grid2 .wide{grid-column:1/-1}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:5px;font-size:14px}
+.empty{padding:22px 0;color:var(--ink-2)}
+
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 16px}
+  .rail nav{flex-direction:row;flex-wrap:wrap}.rail .foot{margin:0;width:100%}
+  .lookup{grid-template-columns:1fr}
+  .verdict{grid-template-columns:1fr;gap:12px}
+  .grid2{grid-template-columns:1fr}
+  table{font-size:13px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .verdict{animation:in .28s ease-out}
+  @keyframes in{from{opacity:.0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">vnbi<small>Blockchain Intelligence</small></div>
+    <nav aria-label="Điều hướng chính" id="nav">
+      <a href="#/screen" data-r="screen">Kiểm tra địa chỉ</a>
+      <a href="#/history" data-r="history">Lịch sử kiểm tra</a>
+      <a href="#/labels" data-r="labels">Nhãn</a>
+      <a href="#/audit" data-r="audit">Nhật ký hệ thống</a>
+    </nav>
+    <div class="foot">
+      <div><span class="dot" id="hdot"></span><span id="htxt">Đang kết nối…</span></div>
+      <label for="key">Khoá API</label>
+      <input id="key" type="password" autocomplete="off" placeholder="X-API-Key (nếu bật)">
+      <label for="actor">Tên người thao tác</label>
+      <input id="actor" type="text" autocomplete="off" placeholder="vd. analyst.lan">
+    </div>
+  </aside>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {
+  get(k){ try { return sessionStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k,v){ try { sessionStorage.setItem(k,v); } catch {} }
+};
+const LEVEL = {allow:["Cho qua","Rủi ro thấp"], review:["Cần duyệt","Rủi ro trung bình"], hold:["Giữ lại","Rủi ro cao"], block:["Chặn","Rủi ro nghiêm trọng"]};
+const CATS = {sanctioned:"Bị trừng phạt", terror_financing:"Tài trợ khủng bố", ransomware:"Ransomware", hack_theft:"Hack / trộm cắp",
+  darknet:"Darknet", scam_investment:"Lừa đảo đầu tư", fake_trading_app:"App giao dịch giả", mule:"Ví trung gian (mule)",
+  mixer:"Mixer", gambling:"Cờ bạc", exchange:"Sàn giao dịch", payment_processor:"Cổng thanh toán", defi_router:"Router DeFi"};
+const RISKY = new Set(["sanctioned","terror_financing","ransomware","hack_theft","darknet","scam_investment","fake_trading_app","mule","mixer","gambling"]);
+const cat = c => CATS[c] || c;
+const short = a => a && a.length > 18 ? a.slice(0,8) + "…" + a.slice(-6) : a;
+const pct = x => (x * 100).toFixed(x < .1 ? 1 : 0) + "%";
+const when = ts => new Date(ts * 1000).toLocaleString("vi-VN");
+const usd = x => "$" + Number(x).toLocaleString("en-US", {maximumFractionDigits: 0});
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type":"application/json", "X-API-Key": store.get("key"), "X-Actor": store.get("actor") || "web", ...(opts.headers||{})}});
+  let j = {}; try { j = await r.json(); } catch {}
+  if (!r.ok) throw new Error(r.status === 401 ? "Khoá API không đúng hoặc còn trống. Nhập khoá ở góc dưới bên trái." : (j.error || "Lỗi " + r.status));
+  return j;
+}
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2400); }
+function copyAddr(el){ navigator.clipboard?.writeText(el.dataset.a).then(() => toast("Đã sao chép địa chỉ")); }
+document.addEventListener("click", e => { const b = e.target.closest(".addr"); if (b) copyAddr(b); });
+
+const view = $("#view");
+function head(t, s){ return `<h1>${esc(t)}</h1><p class="sub">${esc(s)}</p>`; }
+function err(m){ return `<div class="err" role="alert">${esc(m)}</div>`; }
+
+/* ---------- Kiểm tra địa chỉ ---------- */
+async function screenView(chain, address) {
+  chain = chain || "eth";
+  view.innerHTML = head("Kiểm tra địa chỉ", "Nhập địa chỉ đối tác của khoản nạp hoặc rút. Kết quả gồm quyết định, rule đã kích hoạt và đường đi của dòng tiền.") +
+    `<form class="lookup" id="f">
+       <div><label for="chain">Chain</label><select id="chain">${["eth","bsc","polygon","arbitrum","optimism","base","avalanche","btc","tron"].map(c=>`<option ${c===chain?"selected":""}>${c}</option>`).join("")}</select></div>
+       <div><label for="addr">Địa chỉ</label><input id="addr" class="mono" value="${esc(address||"")}" placeholder="0x…" autocomplete="off" spellcheck="false" required></div>
+       <button class="btn" id="go">Kiểm tra</button>
+     </form><div id="out"></div>`;
+  $("#f").onsubmit = e => { e.preventDefault(); location.hash = `#/screen/${$("#chain").value}/${encodeURIComponent($("#addr").value.trim())}`; };
+  const out = $("#out");
+  if (!address) {
+    try {
+      const [s, h] = await Promise.all([api("/stats"), api("/screenings?limit=6")]);
+      const n = Object.values(s.screenings).reduce((a,b)=>a+b,0);
+      out.innerHTML = `<p class="stats" style="margin-top:22px"><span><b>${s.transfers.toLocaleString()}</b> giao dịch</span><span><b>${s.labels.toLocaleString()}</b> nhãn đang dùng</span><span><b>${s.entities.toLocaleString()}</b> cụm địa chỉ</span><span><b>${n}</b> lượt kiểm tra</span><span>Chính sách <b>${esc(s.policy_version)}</b></span></p>` +
+        (h.items.length ? `<section style="margin-top:8px"><h2>Vừa kiểm tra</h2>${histTable(h.items)}</section>` : `<p class="empty">Chưa có lượt kiểm tra nào. Dán một địa chỉ vào ô trên để bắt đầu.</p>`);
+      bindRows();
+    } catch (e) { out.innerHTML = err(e.message); }
+    return;
+  }
+  $("#go").disabled = true;
+  try {
+    const r = await api(`/address/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`);
+    out.innerHTML = renderResult(r);
+    $("#go").disabled = false;
+    out.querySelectorAll("[data-revoke]").forEach(b => b.onclick = async () => {
+      const reason = prompt("Lý do gỡ cạnh này khỏi cụm?"); if (!reason) return;
+      try { await api("/edge/revoke", {method:"POST", body: JSON.stringify({id:+b.dataset.revoke, reason})}); toast("Đã gỡ cạnh và tính lại cụm"); screenView(chain, address); }
+      catch (e) { toast(e.message); }
+    });
+  } catch (e) { out.innerHTML = err(e.message); $("#go").disabled = false; }
+}
+
+function renderResult(r) {
+  const [word, lvl] = LEVEL[r.decision];
+  const fired = r.rules_fired.length
+    ? `<table><thead><tr><th>Rule</th><th>Hạng mục</th><th>Loại tiếp xúc</th><th class="num">Tỉ trọng</th><th>Hành động</th></tr></thead><tbody>` +
+      r.rules_fired.map(f => `<tr><td><b>${esc(f.rule)}</b> ${esc(f.name)}</td><td>${esc(cat(f.category))}</td><td>${f.kind==="direct"?"Trực tiếp":"Gián tiếp"}</td><td class="num">${pct(f.share)}</td><td><span class="pill p-${esc(f.action)}">${esc(LEVEL[f.action][0])}</span></td></tr>`).join("") + `</tbody></table>`
+    : `<p class="muted">Không rule nào kích hoạt. Địa chỉ không có tiếp xúc đáng kể với hạng mục rủi ro trong phạm vi ${esc(r.policy_version)}.</p>`;
+
+  const traces = Object.entries(r.exposure).map(([c, x]) => {
+    const nodes = x.path.slice().reverse(), n = nodes.length;
+    const items = nodes.map((s, i) => {
+      const isSrc = i === 0, isMe = i === n - 1;
+      const chips = (s.labels||[]).map(l => `<span class="chip ${RISKY.has(l[0])?"risk":"safe"}" title="nguồn: ${esc(l[2])} · độ tin cậy ${esc(l[3])}">${esc(cat(l[0]))}</span>`).join("");
+      const li = `<li class="node ${isSrc?"src":""} ${isMe?"me":""}"><button class="addr" data-a="${esc(s.address)}" title="Bấm để sao chép">${esc(short(s.address))}</button> ${chips}
+        ${s.n_members>1?`<span class="chip">cụm ${s.n_members} địa chỉ</span>`:""}${isMe?`<span class="muted"> địa chỉ đang xét</span>`:""}${isSrc?`<span class="muted"> nguồn rủi ro</span>`:""}</li>`;
+      if (isMe) return li;
+      const up = nodes[i + 1];
+      const flow = up.received_via_txs ? `Chuyển tiếp ${usd(up.flow_usd)}, chiếm ${pct(up.flow_share)} dòng vào · tx <span class="mono">${up.received_via_txs.map(t=>esc(short(t))).join(", ")}</span>` : "";
+      return li + `<li class="hop" aria-hidden="false">${flow}</li>`;
+    }).join("");
+    return `<div class="trace"><div class="trace-head"><span class="pct p-${r.decision==="allow"?"review":r.decision}">${pct(x.share)}</span><b>${esc(cat(c))}</b><span class="muted">${x.kind==="direct"?"trực tiếp":"gián tiếp"} · hop ${x.hop} · nhãn tin cậy ${x.label_confidence} (${esc(x.label_source)})</span></div><ol class="chain">${items}</ol></div>`;
+  }).join("") || `<p class="muted">Không tìm thấy đường đi từ nguồn rủi ro trong giới hạn hop và bộ lọc bụi.</p>`;
+
+  const labels = r.labels.length
+    ? `<table><thead><tr><th>Hạng mục</th><th>Tên</th><th>Nguồn</th><th class="num">Tin cậy</th><th class="num">Bậc nguồn</th></tr></thead><tbody>` +
+      r.labels.map(l => `<tr><td>${esc(cat(l.category))}</td><td>${esc(l.name||"")}</td><td>${esc(l.source)} <span class="muted">(${esc(l.method)})</span></td><td class="num">${l.confidence}</td><td class="num">${l.trust_tier}</td></tr>`).join("") + `</tbody></table>`
+    : `<p class="muted">Địa chỉ và cụm của nó chưa có nhãn.</p>`;
+
+  const ev = (r.edge_evidence||[]).length
+    ? `<section><h2>Bằng chứng gộp cụm</h2><p class="muted" style="margin-top:0">Cụm này là giả thuyết từ heuristic. Gỡ một cạnh nếu bạn xác minh nó sai.</p><table><thead><tr><th>Tín hiệu</th><th>Cặp địa chỉ</th><th class="num">Tin cậy</th><th>Tx</th><th></th></tr></thead><tbody>` +
+      r.edge_evidence.map(e => `<tr><td>${esc(e.signal)}</td><td class="mono">${esc(short(e.a))} – ${esc(short(e.b))}</td><td class="num">${e.confidence}</td><td class="mono">${esc(short(e.tx))}</td><td>${e.active?`<button class="btn ghost" data-revoke="${e.id}">Gỡ cạnh</button>`:`<span class="muted">đã gỡ</span>`}</td></tr>`).join("") + `</tbody></table></section>` : "";
+
+  return `<div class="verdict v-${esc(r.decision)}"><div><div class="word">${word}</div><div class="lvl">${lvl}</div></div>
+      <dl><dt>Địa chỉ</dt><dd class="mono">${esc(r.address)}</dd><dt>Thực thể</dt><dd class="mono">${esc(r.entity_id)} · ${r.n_members} địa chỉ</dd>
+      <dt>Tính đến</dt><dd>${when(r.as_of)}</dd><dt>Chính sách</dt><dd>${esc(r.policy_version)}</dd></dl></div>
+    <section><h2>Rule đã kích hoạt</h2>${fired}</section>
+    <section><h2>Dấu vết dòng tiền</h2>${traces}</section>
+    <section><h2>Nhãn</h2>${labels}</section>${ev}
+    <section><h2>Giới hạn của kết quả</h2><ul class="notes">${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></section>
+    <details><summary>Dữ liệu thô (JSON)</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details>`;
+}
+
+/* ---------- Lịch sử ---------- */
+function histTable(items){
+  return `<table><thead><tr><th>Thời gian</th><th>Chain</th><th>Địa chỉ</th><th>Quyết định</th></tr></thead><tbody>` +
+    items.map(i => `<tr class="click" tabindex="0" data-c="${esc(i.chain)}" data-a="${esc(i.address)}"><td>${when(i.ts)}</td><td>${esc(i.chain)}</td><td class="mono">${esc(short(i.address))}</td><td><span class="pill p-${esc(i.decision)}">${esc(LEVEL[i.decision][0])}</span></td></tr>`).join("") + `</tbody></table>`;
+}
+function bindRows(){ view.querySelectorAll("tr.click").forEach(tr => { const go = () => location.hash = `#/screen/${tr.dataset.c}/${encodeURIComponent(tr.dataset.a)}`; tr.onclick = go; tr.onkeydown = e => { if (e.key === "Enter") go(); }; }); }
+async function historyView(){
+  view.innerHTML = head("Lịch sử kiểm tra", "100 lượt gần nhất. Bấm một dòng để mở lại kết quả với dữ liệu hiện tại.") + `<div id="out"></div>`;
+  try { const h = await api("/screenings?limit=100"); $("#out").innerHTML = h.items.length ? histTable(h.items) : `<p class="empty">Chưa có lượt kiểm tra nào.</p>`; bindRows(); }
+  catch (e) { $("#out").innerHTML = err(e.message); }
+}
+
+/* ---------- Nhãn ---------- */
+function labelsView(){
+  const opts = Object.keys(CATS).map(c => `<option value="${c}">${esc(CATS[c])} (${c})</option>`).join("");
+  view.innerHTML = head("Nhãn", "Nhãn không bị ghi đè: thêm nhãn mới cùng nguồn sẽ thay thế nhãn cũ nhưng lịch sử vẫn còn.") +
+    `<section style="margin-top:0"><h2>Thêm nhãn</h2><form id="lf" class="grid2">
+      <div class="field"><label for="lc">Chain</label><select id="lc">${["eth","bsc","polygon","arbitrum","optimism","base","avalanche","btc","tron"].map(c=>`<option>${c}</option>`).join("")}</select></div>
+      <div class="field"><label for="lk">Hạng mục</label><select id="lk">${opts}</select></div>
+      <div class="field wide"><label for="la">Địa chỉ</label><input id="la" class="mono" required spellcheck="false"></div>
+      <div class="field"><label for="ls">Nguồn</label><input id="ls" required placeholder="vd. internal_case"></div>
+      <div class="field"><label for="lq">Độ tin cậy (0–1)</label><input id="lq" type="number" min="0" max="1" step="0.05" value="0.7"></div>
+      <div class="field wide"><label for="ln">Tên (tuỳ chọn)</label><input id="ln"></div>
+      <div class="wide"><button class="btn">Lưu nhãn</button></div></form></section>
+     <section><h2>Lịch sử nhãn của một địa chỉ</h2><form class="lookup" id="hf"><div><label for="hc">Chain</label><select id="hc"><option>eth</option><option>bsc</option><option>btc</option><option>tron</option></select></div><div><label for="ha">Địa chỉ</label><input id="ha" class="mono" required spellcheck="false"></div><button class="btn">Xem</button></form><div id="hist"></div></section>`;
+  $("#lf").onsubmit = async e => { e.preventDefault();
+    try { await api("/label", {method:"POST", body: JSON.stringify({chain:$("#lc").value, address:$("#la").value.trim(), category:$("#lk").value, source:$("#ls").value.trim(), confidence:+$("#lq").value, name:$("#ln").value.trim()||null})}); toast("Đã lưu nhãn"); }
+    catch (x) { toast(x.message); } };
+  $("#hf").onsubmit = async e => { e.preventDefault();
+    try { const r = await api(`/labels/${$("#hc").value}/${encodeURIComponent($("#ha").value.trim())}`);
+      $("#hist").innerHTML = r.items.length ? `<table><thead><tr><th>#</th><th>Hạng mục</th><th>Nguồn</th><th class="num">Tin cậy</th><th>Trạng thái</th><th>Tạo lúc</th></tr></thead><tbody>` + r.items.map(l => `<tr><td>${l.id}</td><td>${esc(cat(l.category))}</td><td>${esc(l.source)}</td><td class="num">${l.confidence}</td><td>${l.superseded_by===null?"đang dùng":l.superseded_by===-1?"đã rút":"đã thay bằng #"+l.superseded_by}</td><td>${when(l.created_at)}</td></tr>`).join("") + `</tbody></table>` : `<p class="empty">Địa chỉ này chưa từng có nhãn.</p>`;
+    } catch (x) { $("#hist").innerHTML = err(x.message); } };
+}
+
+/* ---------- Nhật ký ---------- */
+async function auditView(){
+  view.innerHTML = head("Nhật ký hệ thống", "Mọi lượt kiểm tra, thêm nhãn và gỡ cạnh đều được ghi lại cùng người thao tác.") + `<div id="out"></div>`;
+  try { const a = await api("/audit?limit=200");
+    $("#out").innerHTML = a.items.length ? `<table><thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>` + a.items.map(i => `<tr><td>${when(i.ts)}</td><td>${esc(i.actor)}</td><td>${esc(i.action)}</td><td class="mono" style="word-break:break-all">${esc(i.payload)}</td></tr>`).join("") + `</tbody></table>` : `<p class="empty">Nhật ký đang trống.</p>`;
+  } catch (e) { $("#out").innerHTML = err(e.message); }
+}
+
+/* ---------- router ---------- */
+function route(){
+  const [, r = "screen", c, ...rest] = location.hash.split("/");
+  document.querySelectorAll("#nav a").forEach(a => a.toggleAttribute("aria-current", a.dataset.r === r) || a.removeAttribute("aria-current"));
+  document.querySelectorAll("#nav a").forEach(a => { if (a.dataset.r === r) a.setAttribute("aria-current","page"); });
+  if (r === "history") historyView(); else if (r === "labels") labelsView(); else if (r === "audit") auditView();
+  else screenView(c, rest.length ? decodeURIComponent(rest.join("/")) : "");
+}
+$("#key").value = store.get("key"); $("#actor").value = store.get("actor");
+$("#key").onchange = e => { store.set("key", e.target.value); route(); };
+$("#actor").onchange = e => store.set("actor", e.target.value);
+addEventListener("hashchange", route);
+fetch("/health").then(r => r.json()).then(() => { $("#hdot").className = "dot ok"; $("#htxt").textContent = "Máy chủ hoạt động"; })
+  .catch(() => { $("#hdot").className = "dot bad"; $("#htxt").textContent = "Không kết nối được máy chủ"; });
+route();
+</script>
+</body>
+</html>
