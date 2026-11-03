@@ -305,7 +305,7 @@ $("#key").value = store.get("key"); $("#actor").value = store.get("actor");
 $("#key").onchange = e => { store.set("key", e.target.value); route(); };
 $("#actor").onchange = e => store.set("actor", e.target.value);
 addEventListener("hashchange", route);
-fetch("/health").then(r => r.json()).then(() => { $("#hdot").className = "dot ok"; $("#htxt").textContent = "Máy chủ hoạt động"; })
+fetch("/health").then(r => r.json()).then(h => { $("#hdot").className = "dot ok"; $("#htxt").textContent = h.demo ? "Bản demo · dữ liệu tổng hợp · chỉ đọc" : "Máy chủ hoạt động"; })
   .catch(() => { $("#hdot").className = "dot bad"; $("#htxt").textContent = "Không kết nối được máy chủ"; });
 route();
 </script>

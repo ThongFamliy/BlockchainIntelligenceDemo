@@ -1,0 +1,1 @@
+# Không có phụ thuộc ngoài: vnbi chỉ dùng thư viện chuẩn của Python.

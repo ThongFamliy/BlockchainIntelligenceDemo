@@ -12,7 +12,7 @@ Heuristic gộp cụm (UTXO co-spend, EVM deposit-sweep) -> link_edges (kèm b�
 
 ## Chạy thử
 ```bash
-python -m pytest -q          # 16 test
+python -m pytest -q          # 19 test
 python -m vnbi demo          # kịch bản tổng hợp end-to-end (địa chỉ giả)
 ```
 
@@ -34,6 +34,12 @@ python -m vnbi --db demo_out/demo.db serve --port 8080
 ```
 Màn hình: Kiểm tra địa chỉ (quyết định, rule, dấu vết dòng tiền, bằng chứng cụm + gỡ cạnh), Lịch sử, Nhãn (thêm + xem lịch sử), Nhật ký.
 Nhập khoá API và tên người thao tác ở góc trái dưới; tên đó được ghi vào audit. Khi mở ra ngoài localhost hãy đặt `BI_API_KEY`, đặt sau reverse proxy có HTTPS và SSO.
+
+## Deploy demo lên Vercel
+Repo đã có `api/index.py`, `vercel.json`, `requirements.txt`, `.python-version`. Import repo vào Vercel, không cần cấu hình thêm (Framework: Other).
+- Bản Vercel là **demo chỉ đọc, dữ liệu tổng hợp**: DB dựng lại trong `/tmp` mỗi lần khởi động, không thêm nhãn/gỡ cạnh được (API trả 403).
+- Vercel là serverless, không có đĩa bền: **đừng dùng cho dữ liệu thật**. Bản thật chạy `python -m vnbi serve` trên VM/container có ổ đĩa + `BI_API_KEY` + HTTPS.
+- Lỗi build/chạy: xem Functions → Logs của deployment; kiểm tra `/api/index?path=health` phải trả `{"ok": true, "demo": true}`.
 
 ## Nguyên tắc thiết kế
 - Mỗi suy luận có **độ tin cậy + bằng chứng**; cạnh gộp cụm revoke được (`revoke_edge`) và cụm tách lại.

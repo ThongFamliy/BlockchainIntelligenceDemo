@@ -13,7 +13,6 @@ import os
 
 from . import cluster, db
 from . import labels as L
-from .cli import ingest_csv, parse_prices
 from .risk import RiskEngine
 from .vendor.evm_sweep_cluster import load as load_rows
 
@@ -55,7 +54,9 @@ def build_labels():
     ]
 
 
-def run_demo(out="demo_out"):
+def seed_demo(con, out):
+    """Ghi CSV mẫu vào `out`, nạp vào `con`, gộp cụm. Trả về số liệu để in/kiểm tra."""
+    from .cli import ingest_csv, parse_prices
     os.makedirs(out, exist_ok=True)
     tp, lp = os.path.join(out, "transfers.csv"), os.path.join(out, "labels.csv")
     with open(tp, "w", newline="") as f:
@@ -66,14 +67,22 @@ def run_demo(out="demo_out"):
         w = csv.writer(f)
         w.writerow(["chain", "address", "category", "name", "source", "confidence", "trust_tier"])
         w.writerows(build_labels())
+    n_tr = ingest_csv(con, "eth", tp, parse_prices(["ETH=3500"]))
+    n_lb = L.import_csv(con, lp)
+    sweep = cluster.evm_sweep_edges(con, "eth", load_rows(tp))
+    stats = cluster.rebuild(con, "eth")
+    return {"transfers": n_tr, "labels": n_lb, "sweep": sweep, "cluster": stats, "files": (tp, lp)}
 
+
+def run_demo(out="demo_out"):
+    os.makedirs(out, exist_ok=True)
     con = db.connect(os.path.join(out, "demo.db"))
     con.executescript("DELETE FROM transfers; DELETE FROM labels; DELETE FROM link_edges; "
                       "DELETE FROM entity_members; DELETE FROM screenings; DELETE FROM audit;")
-    print("nạp:", ingest_csv(con, "eth", tp, parse_prices(["ETH=3500"])), "transfers,",
-          L.import_csv(con, lp), "nhãn")
-    r = cluster.evm_sweep_edges(con, "eth", load_rows(tp))
-    print("cụm sweep:", {k: v for k, v in r.items() if k != "detail"}, cluster.rebuild(con, "eth"))
+    d = seed_demo(con, out)
+    r = d["sweep"]
+    print("nạp:", d["transfers"], "transfers,", d["labels"], "nhãn")
+    print("cụm sweep:", {k: v for k, v in r.items() if k != "detail"}, d["cluster"])
     for c in r["detail"]:
         print("  lý do:", *c["reasons"], sep="\n    - ")
 
@@ -89,5 +98,5 @@ def run_demo(out="demo_out"):
             print(f"   đường đi: {hops}   txs: {x['path'][0].get('received_via_txs', [])}")
         if not res["rules_fired"]:
             print("   không có rule nào kích hoạt")
-    print("\nFile mẫu:", tp, lp, "| DB:", os.path.join(out, "demo.db"))
+    print("\nFile mẫu:", *d["files"], "| DB:", os.path.join(out, "demo.db"))
     return 0

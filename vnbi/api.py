@@ -20,7 +20,8 @@ from .risk import RiskEngine
 
 
 class Service:
-    def __init__(self, con, policy=None, api_key=None):
+    def __init__(self, con, policy=None, api_key=None, read_only=False):
+        self.read_only = read_only  # demo công khai: chặn mọi thao tác ghi nhãn / gỡ cạnh
         self.con, self.engine = con, RiskEngine(con, policy)
         self.api_key = api_key if api_key is not None else os.environ.get("BI_API_KEY")
         self.lock = threading.Lock()
@@ -29,10 +30,12 @@ class Service:
 def handle(svc, method, path, body=None, headers=None):
     headers = {k.lower(): v for k, v in (headers or {}).items()}
     if path == "/health":
-        return 200, {"ok": True}
+        return 200, {"ok": True, "demo": svc.read_only}
     if svc.api_key and not hmac.compare_digest(headers.get("x-api-key", ""), svc.api_key):
         return 401, {"error": "unauthorized"}
     actor = headers.get("x-actor", "api")
+    if svc.read_only and method == "POST" and path.split("?")[0] in ("/label", "/edge/revoke"):
+        return 403, {"error": "Bản demo công khai ở chế độ chỉ đọc: không thêm nhãn hay gỡ cạnh được. Chạy bản riêng của bạn để dùng đầy đủ."}
     parts = [p for p in path.split("?")[0].split("/") if p]
     try:
         limit = min(int(path.split("limit=")[1].split("&")[0]), 500) if "limit=" in path else 50
